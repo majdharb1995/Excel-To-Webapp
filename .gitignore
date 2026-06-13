@@ -1,0 +1,15 @@
+# لويندوز وملفات النظام
+Thumbs.db
+.DS_Store
+
+# الباكيند (Python)
+backend/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/venv/
+
+# الفرونتيند (Node / React)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env

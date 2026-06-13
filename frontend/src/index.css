@@ -1,0 +1,10 @@
+/* ─── ENTRY CSS - Import all modular stylesheets ─── */
+@import './styles/variables.css';
+@import './styles/navbar.css';
+@import './styles/buttons.css';
+@import './styles/glassmorphism.css';
+@import './styles/layout.css';
+@import './styles/tabs.css';
+@import './styles/tables.css';
+@import './styles/architect.css';
+@import './styles/lineage.css';

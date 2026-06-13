@@ -1,0 +1,117 @@
+/* ─── GLASSMORPHISM ─── */
+.card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.card:hover {
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.1), 0 12px 40px rgba(0,0,0,0.4);
+  border-color: rgba(34, 197, 94, 0.3);
+  transform: translateX(-3px);
+}
+
+.card h3 { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; font-weight: 700; }
+
+.ai-action {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  padding: 1.5rem;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  margin-bottom: 3rem;
+}
+
+.sheet-card {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  transition: all 0.3s;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.sheet-card:hover { border-color: rgba(34, 197, 94, 0.3); box-shadow: 0 0 20px rgba(34, 197, 94, 0.08), 0 8px 32px rgba(0,0,0,0.35); }
+
+.flow-node-card {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.flow-node-card:hover { transform: translateY(-3px); box-shadow: 0 0 20px rgba(0,0,0,0.4), 0 0 10px var(--primary-glow); border-color: var(--primary); }
+
+.cross-sheet-relations {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.sql-tab-wrapper {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.ai-report-card {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 2rem;
+  direction: rtl;
+  line-height: 1.8;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.code-block-container {
+  background: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  padding: 1.5rem;
+  overflow-x: auto;
+  border: 1px solid var(--glass-border);
+}
+
+.prompt-card {
+  background: rgba(2, 6, 23, 0.9) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 10px;
+  padding: 25px !important;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  position: relative;
+}
+
+.prompt-card pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #e2e8f0;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}

@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+openpyxl
+requests
+pandas
+pydantic
+sqlalchemy
+numpy
+python-dateutil

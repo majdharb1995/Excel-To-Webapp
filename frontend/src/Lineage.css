@@ -1,0 +1,256 @@
+/* ═══════════════════════════════════════════════════ */
+/* SYNAPTO DATA LINEAGE - Professional Dark Mode v2   */
+/* Enhanced: RTL Support + Refined Interactions        */
+/* ═══════════════════════════════════════════════════ */
+
+/* ── ReactFlow Controls ── */
+.react-flow__controls {
+  background: #0f172a !important;
+  border: 1px solid rgba(0, 212, 255, 0.15) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7) !important;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: #0f172a !important;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.08) !important;
+  fill: #00d4ff !important;
+  width: 28px !important;
+  height: 28px !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(0, 212, 255, 0.08) !important;
+}
+
+.react-flow__controls-button svg {
+  fill: #00d4ff !important;
+}
+
+/* ── Hide Attribution ── */
+.react-flow__attribution {
+  display: none !important;
+}
+
+/* ── Node Styles ── */
+.react-flow__node-default,
+.react-flow__node-sheetNode {
+  cursor: grab !important;
+  user-select: none !important;
+  transition: filter 0.2s ease !important;
+}
+
+.react-flow__node-default:active,
+.react-flow__node-sheetNode:active {
+  cursor: grabbing !important;
+}
+
+.react-flow__node-default:hover,
+.react-flow__node-sheetNode:hover {
+  filter: brightness(1.1);
+}
+
+/* ── Edge Styles ── */
+.react-flow__edge-path {
+  stroke-width: 2px !important;
+  cursor: pointer !important;
+  transition: stroke-width 0.2s ease !important;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 3.5px !important;
+  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.5)) !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 3.5px !important;
+  filter: drop-shadow(0 0 14px rgba(0, 212, 255, 0.7)) !important;
+}
+
+/* ── Edge Labels ── */
+.react-flow__edge-textbg {
+  fill: #0a0f1c !important;
+  fill-opacity: 0.94 !important;
+  rx: 5;
+  ry: 5;
+}
+
+.react-flow__edge-text {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  font-family: 'Cascadia Code', 'Fira Code', monospace !important;
+  pointer-events: all !important;
+  cursor: pointer !important;
+  transition: fill 0.15s ease !important;
+}
+
+.react-flow__edge-text:hover {
+  fill: #ffffff !important;
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+}
+
+/* ── MiniMap ── */
+.react-flow__minimap {
+  background: rgba(10, 15, 28, 0.92) !important;
+  border: 1px solid rgba(0, 212, 255, 0.12) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(0, 212, 255, 0.08) !important;
+  stroke: #00d4ff !important;
+  stroke-width: 1 !important;
+}
+
+.react-flow__minimap-node {
+  fill: #1e293b !important;
+  stroke: rgba(0, 212, 255, 0.25) !important;
+}
+
+/* ── Handles ── */
+.react-flow__handle {
+  width: 8px !important;
+  height: 8px !important;
+  background: #0a0f1c !important;
+  border: 2px solid #00d4ff !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-flow__handle:hover {
+  background: #00d4ff !important;
+  box-shadow: 0 0 10px #00d4ff !important;
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* ═══════════════════════════════════════════════════ */
+/* Popover Styles                                     */
+/* ═══════════════════════════════════════════════════ */
+
+.synapto-edge-popover {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  width: 380px;
+  background: rgba(10, 15, 28, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid #00d4ff;
+  border-radius: 14px;
+  padding: 20px;
+  color: #fff;
+  z-index: 20;
+  box-shadow: 0 0 40px rgba(0, 212, 255, 0.15), 0 12px 32px rgba(0, 0, 0, 0.6);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[dir="rtl"] .synapto-edge-popover {
+  right: auto;
+  left: 30px;
+}
+
+.synapto-popover-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+[dir="rtl"] .synapto-popover-close {
+  right: auto;
+  left: 14px;
+}
+
+.synapto-popover-close:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  transform: scale(1.1);
+}
+
+.synapto-popover-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #00d4ff;
+  padding-right: 30px;
+}
+
+[dir="rtl"] .synapto-popover-title {
+  padding-right: 0;
+  padding-left: 30px;
+}
+
+.synapto-popover-info {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.synapto-popover-code {
+  background: #020617;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-top: 10px;
+  border: 1px solid #1e293b;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.synapto-popover-code::-webkit-scrollbar { width: 5px; }
+.synapto-popover-code::-webkit-scrollbar-track { background: #020617; }
+.synapto-popover-code::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+.synapto-popover-code::-webkit-scrollbar-thumb:hover { background: #00d4ff; }
+
+.synapto-popover-code code {
+  color: #facc15;
+  font-size: 11px;
+  word-break: break-all;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════ */
+/* Animations                                         */
+/* ═══════════════════════════════════════════════════ */
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%   { box-shadow: 0 0 5px rgba(0, 212, 255, 0.2); }
+  50%  { box-shadow: 0 0 20px rgba(0, 212, 255, 0.4); }
+  100% { box-shadow: 0 0 5px rgba(0, 212, 255, 0.2); }
+}
+
+/* ═══════════════════════════════════════════════════ */
+/* Background Pattern                                 */
+/* ═══════════════════════════════════════════════════ */
+
+.react-flow__background {
+  opacity: 0.5;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a0f1c; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #00d4ff; }
