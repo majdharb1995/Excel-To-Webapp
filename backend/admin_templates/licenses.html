@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Licenses{% endblock %}
+{% block head %}
+<style>
+.days-safe { color: #22c55e; }
+.days-warning { color: #eab308; }
+.days-critical { color: #ef4444; }
+</style>
+{% endblock %}
+{% block content %}
+<h1>🔑 Active Licenses</h1>
+{% if licenses %}
+<table>
+  <tr><th>Email</th><th>Company</th><th>Expires At</th><th>Days Left</th><th>Status</th><th>Actions</th></tr>
+  {% for l in licenses %}
+  <tr>
+    <td><strong>{{ l.email }}</strong></td>
+    <td>{{ l.company or '-' }}</td>
+    <td style="white-space:nowrap">{{ l.expires_at[:16] }}</td>
+    <td>
+      {% if l.days_left <= 5 %}
+        <strong class="days-critical">{{ l.days_left }}</strong>
+      {% elif l.days_left <= 15 %}
+        <strong class="days-warning">{{ l.days_left }}</strong>
+      {% else %}
+        <strong class="days-safe">{{ l.days_left }}</strong>
+      {% endif %}
+    </td>
+    <td>
+      {% if l.is_active %}
+        <span class="badge badge-active">Active</span>
+      {% else %}
+        <span class="badge badge-deactivated">Deactivated</span>
+      {% endif %}
+    </td>
+    <td class="actions-cell">
+      {% if l.is_active %}
+      <form method="POST" action="/admin/licenses/{{ l.id }}/deactivate" style="display:inline">
+        <input type="text" name="reason" placeholder="Reason" style="width:120px;padding:.35rem .5rem;font-size:.8rem;background:#080c14;border:1px solid #1e2a3a;color:#e0e0e0;border-radius:6px">
+        <button type="submit" class="btn btn-red btn-sm">Deactivate</button>
+      </form>
+      {% else %}
+      <span style="font-size:.8rem;color:#8b949e">{{ l.deactivate_reason or 'No reason' }}</span>
+      <form method="POST" action="/admin/licenses/{{ l.id }}/reactivate" style="display:inline">
+        <button type="submit" class="btn btn-green btn-sm">Reactivate</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="empty">No licenses yet.</div>
+{% endif %}
+{% endblock %}

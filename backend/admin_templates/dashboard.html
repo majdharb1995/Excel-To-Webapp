@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Activation Requests{% endblock %}
+{% block content %}
+<h1>📥 Activation Requests</h1>
+{% if requests %}
+<table>
+  <tr><th>Name</th><th>Email</th><th>Phone</th><th>Company</th><th>Notes</th><th>Status</th><th>Date</th><th>Actions</th></tr>
+  {% for r in requests %}
+  <tr>
+    <td><strong>{{ r.full_name }}</strong></td>
+    <td>{{ r.email }}</td>
+    <td>{{ r.phone or '-' }}</td>
+    <td>{{ r.company or '-' }}</td>
+    <td style="max-width:180px;font-size:.82rem;color:#8b949e">{{ r.notes or '-' }}</td>
+    <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+    <td style="white-space:nowrap">{{ r.created_at[:16] }}</td>
+    <td class="actions-cell">
+      {% if r.status == 'pending' %}
+      <form method="POST" action="/admin/requests/{{ r.id }}/approve" style="display:inline">
+        <button type="submit" class="btn btn-green btn-sm">✓ Approve</button>
+      </form>
+      <form method="POST" action="/admin/requests/{{ r.id }}/reject" style="display:inline">
+        <input type="text" name="reason" placeholder="Reason" style="width:120px;padding:.35rem .5rem;font-size:.8rem;background:#080c14;border:1px solid #1e2a3a;color:#e0e0e0;border-radius:6px">
+        <button type="submit" class="btn btn-red btn-sm">✗ Reject</button>
+      </form>
+      {% elif r.status == 'rejected' %}
+      <span style="font-size:.8rem;color:#ef4444">{{ r.admin_note or 'No reason' }}</span>
+      {% else %}
+      <span style="color:#22c55e;font-size:.8rem">Approved {{ r.reviewed_at[:10] if r.reviewed_at else '' }}</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="empty">No requests yet.</div>
+{% endif %}
+{% endblock %}

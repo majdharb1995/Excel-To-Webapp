@@ -16,6 +16,9 @@ import ApiDesignTab from './components/tabs/ApiDesignTab';
 import ArchitectTab from './components/tabs/ArchitectTab';
 import AIReportTab from './components/tabs/AIReportTab';
 import LineageGraph from './components/lineage/LineageGraph';
+import LicenseBanner from './components/ui/LicenseBanner';
+import LicenseModal from './components/ui/LicenseModal';
+import ActivationModal from './components/ui/ActivationModal';
 
 /* ── Tab Content Router ── */
 function TabContent() {
@@ -34,7 +37,7 @@ function TabContent() {
 
 /* ── Results Section (shown when analysis exists) ── */
 function ResultsSection() {
-  const { analysis, showLineageGraph, setShowLineageGraph } = useAppContext();
+  const { analysis, showLineageGraph } = useAppContext();
 
   if (!analysis || showLineageGraph) return null;
 
@@ -67,10 +70,13 @@ function AppShell() {
   return (
     <div className="app">
       <Navbar />
+      <LicenseBanner />
       <Hero />
       <ResultsSection />
       <LineageSection />
       <Footer />
+      <LicenseModal />
+      <ActivationModal />
     </div>
   );
 }

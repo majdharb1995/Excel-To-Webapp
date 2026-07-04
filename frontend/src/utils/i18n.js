@@ -150,6 +150,69 @@ const translations = {
   'lineage.cols': { en: 'cols', ar: 'أعمدة' },
   'lineage.role': { en: 'Role', ar: 'الدور' },
 
+  /* ── License: Stopped Modal ── */
+  'license.stopped.title': { en: 'Program Stopped', ar: 'البرنامج موقوف' },
+  'license.stopped.desc': {
+    en: 'You have used your free analysis. Activate to unlock all features for 30 days.',
+    ar: 'لقد استخدمت تحليلك المجاني. فعّل البرنامج لفتح جميع الميزات لمدة 30 يوم.'
+  },
+  'license.stopped.activate': { en: 'Activate', ar: 'تفعيل' },
+
+  /* ── License: Request Form ── */
+  'license.request.title': { en: 'Request Activation', ar: 'طلب تفعيل' },
+  'license.request.desc': {
+    en: 'Fill in your details to request activation. You will be notified once approved.',
+    ar: 'عبّئ بياناتك لطلب التفعيل. سيتم إبلاغك بعد الموافقة.'
+  },
+  'license.request.name': { en: 'Full Name *', ar: 'الاسم الكامل *' },
+  'license.request.email': { en: 'Email Address *', ar: 'البريد الإلكتروني *' },
+  'license.request.phone': { en: 'Phone Number', ar: 'رقم الهاتف' },
+  'license.request.company': { en: 'Company Name', ar: 'اسم الشركة' },
+  'license.request.notes': { en: 'Notes', ar: 'ملاحظات' },
+  'license.request.submit': { en: 'Submit Request', ar: 'إرسال الطلب' },
+
+  /* ── License: Check Status ── */
+  'license.check.title': { en: 'Check Request Status', ar: 'تحقق من حالة الطلب' },
+  'license.check.desc': {
+    en: 'Enter your email to check if your request has been approved.',
+    ar: 'أدخل بريدك الإلكتروني للتحقق من حالة طلبك.'
+  },
+  'license.check.placeholder': { en: 'Your email address', ar: 'بريدك الإلكتروني' },
+  'license.check.button': { en: 'Check Status', ar: 'تحقق من الحالة' },
+  'license.check.pending': {
+    en: 'Your request is under review. Please check again later.',
+    ar: 'طلبك قيد المراجعة. يرجى المحاولة لاحقاً.'
+  },
+  'license.check.rejected': { en: 'Your request was rejected.', ar: 'تم رفض طلبك.' },
+  'license.check.approved': { en: 'Approved! Activating...', ar: 'تمت الموافقة! جاري التفعيل...' },
+  'license.check.notFound': { en: 'No request found for this email.', ar: 'لم يتم العثور على طلب لهذا البريد.' },
+
+  /* ── License: Banner ── */
+  'license.banner.active': { en: 'Program is activated', ar: 'البرنامج مفعّل' },
+
+  /* ── License: General ── */
+  'license.title': { en: 'Activate Your Plan', ar: 'فعّل خطتك' },
+  'license.features': { en: 'Unlock premium features:', ar: 'افتح الميزات المميزة:' },
+  'license.feature.1': { en: 'Unlimited Analysis & AI Reports', ar: 'تحليل غير محدود وتقارير AI' },
+  'license.feature.2': { en: 'Advanced Architecture Blueprint', ar: 'مخطط بنية معماري متقدم' },
+  'license.feature.3': { en: 'Enhanced API Design & Lineage Graph', ar: 'تصميم API متقدم ورسوم النسب' },
+  'license.feature.4': { en: '30-day access period after activation', ar: 'وصول لمدة 30 يوم بعد التفعيل' },
+  'license.price': { en: '$6.5/month', ar: '$6.5/شهر' },
+  'license.activate': { en: 'Activate Now', ar: 'فعّل الآن' },
+  'license.codePlaceholder': { en: 'Enter activation code', ar: 'أدخل رمز التفعيل' },
+  'license.submit': { en: 'Submit', ar: 'تأكيد' },
+  'license.invalidCode': { en: 'Invalid activation code', ar: 'رمز تفعيل غير صحيح' },
+  'license.success': { en: 'Activated successfully!', ar: 'تم التفعيل بنجاح!' },
+  'license.daysRemaining': { en: '{{days}} days remaining', ar: 'متبقي {{days}} يوم' },
+  'license.expired': { en: 'License expired', ar: 'انتهت مدة الترخيص' },
+  'license.activation.title': { en: 'Enter Activation Code', ar: 'أدخل رمز التفعيل' },
+  'license.activation.desc': {
+    en: 'Enter your activation code to unlock full features for 30 days.',
+    ar: 'أدخل رمز التفعيل لفتح جميع الميزات لمدة 30 يوم.'
+  },
+  'license.activation.back': { en: '← Back', ar: '→ رجوع' },
+  'license.activation.activating': { en: 'Activating...', ar: 'جاري التفعيل...' },
+
   /* ── Footer ── */
   'footer.text': {
     en: 'Synapto — System Architect Engine · React + FastAPI + SQLite · AI-Ready Blueprint Generator',

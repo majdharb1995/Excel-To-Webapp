@@ -1,3 +1,8 @@
+import sqlite3
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import Form as FastAPIForm
+from starlette.middleware.sessions import SessionMiddleware
 import os
 import io
 import traceback
@@ -22,6 +27,14 @@ from openpyxl.utils import column_index_from_string
 
 from excel_analyzer import ExcelAnalyzer, sanitize_sheet_name, sanitize_and_deduplicate_columns
 
+# ==========================================
+# License / Activation (Secure Verification)
+# ==========================================
+import hmac
+import hashlib
+from fastapi import Request
+from datetime import timedelta
+
 app = FastAPI(title="Synapto System Architect API v7")
 
 app.add_middleware(
@@ -31,6 +44,84 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==========================================
+# Admin Session Middleware
+# ==========================================
+app.add_middleware(SessionMiddleware, secret_key="synapto-admin-session-secret-change-me")
+
+# ==========================================
+# Admin Templates
+# ==========================================
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "admin_templates"))
+
+
+ADMIN_PASSWORD = os.environ.get("SYNAPTO_ADMIN_PASSWORD", "admin123")
+
+# ==========================================
+# Admin Database (SQLite)
+# ==========================================
+ADMIN_DB_PATH = "admin.db"
+
+def get_admin_db():
+    conn = sqlite3.connect(ADMIN_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_admin_db():
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.executescript('''
+        CREATE TABLE IF NOT EXISTS activation_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT,
+            company TEXT,
+            notes TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT DEFAULT (datetime('now','localtime')),
+            reviewed_at TEXT,
+            admin_note TEXT
+        );
+        CREATE TABLE IF NOT EXISTS licenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            request_id INTEGER,
+            email TEXT NOT NULL UNIQUE,
+            full_name TEXT,
+            company TEXT,
+            token TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now','localtime')),
+            deactivated_at TEXT,
+            deactivate_reason TEXT
+        );
+        CREATE TABLE IF NOT EXISTS activity_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            email TEXT,
+            details TEXT,
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        );
+    ''')
+    conn.commit()
+    conn.close()
+
+init_admin_db()
+
+def log_activity(action, email=None, details=None):
+    try:
+        conn = get_admin_db()
+        conn.execute("INSERT INTO activity_log (action, email, details) VALUES (?, ?, ?)", (action, email, details))
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
 
 # ==========================================
 # AI Provider Configuration (Environment Variables)
@@ -1771,10 +1862,265 @@ def _step_{step_num}_compute_projects(db_session) -> None:
 
 
 # ==========================================
+# License / Activation Endpoint
+# ==========================================
+def _sha256_hex(s: str) -> str:
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+def _get_activation_code_hash() -> str:
+    code_hash = os.environ.get("SYNAPTO_ACTIVATION_CODE_HASH", "").strip()
+    if not code_hash:
+        # Default expected hash for synapto988 to make the app runnable out-of-box.
+        # SECURITY NOTE: still provided via environment variable in production.
+        code_hash = _sha256_hex("synapto988")
+    return code_hash
+
+def _get_token_secret() -> str:
+    secret = os.environ.get("SYNAPTO_ACTIVATION_TOKEN_SECRET", "").strip()
+    if not secret:
+        # Default secret (dev). Should be overridden in production.
+        secret = "synapto-token-secret-dev-change-me"
+    return secret
+
+def _sign_payload(payload: str) -> str:
+    secret = _get_token_secret().encode("utf-8")
+    sig = hmac.new(secret, payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return sig
+
+
+def _make_activation_token(expires_at_iso: str) -> str:
+    # Token format: synapto|<expiresAt>|<hmac>
+    # نستخدم | بدلاً من : لأن التاريخ ISO يحتوي على :
+    payload = f"{expires_at_iso}"
+    sig = _sign_payload(payload)
+    return f"synapto|{expires_at_iso}|{sig}"
+
+def _verify_activation_token(token: str):
+    try:
+        if not token:
+            return False, None
+        parts = token.split("|")
+        if len(parts) != 3:
+            return False, None
+        prefix, expires_at_iso, sig = parts
+        if prefix != "synapto":
+            return False, None
+        expected_sig = _sign_payload(expires_at_iso)
+        if not hmac.compare_digest(expected_sig, sig):
+            return False, None
+        
+        # FIX: مقارنة التواريخ بدون مشاكل الـ Timezone
+        try:
+            from datetime import timezone
+            # جعل التاريخين بنفس الصيغة (مع Timezone)
+            dt = datetime.fromisoformat(expires_at_iso.replace("Z", "+00:00"))
+            now = datetime.now(timezone.utc)
+            if dt < now:
+                return False, expires_at_iso
+        except Exception:
+            pass
+            
+        return True, expires_at_iso
+    except Exception:
+        return False, None
+
+
+class ActivateRequest(BaseModel):
+    code: str
+
+class ActivateResponse(BaseModel):
+    success: bool
+    expiresAt: Optional[str] = None
+    token: Optional[str] = None
+    codeHash: Optional[str] = None
+    error: Optional[str] = None
+
+@app.post("/api/activate")
+async def activate(request: Request):
+    # IMPORTANT:
+    # Your client calls are currently failing with 422 JSON decode error BEFORE Pydantic validation.
+    # Therefore we accept ANY body, parse JSON manually, and return debug info if parsing fails.
+    try:
+        raw = await request.body()
+    except Exception:
+        raw = b""
+
+    raw_text = raw.decode("utf-8", errors="replace") if raw else ""
+
+    parsed = None
+    try:
+        if raw:
+            parsed = json.loads(raw_text)
+    except Exception:
+        parsed = None
+
+    code = ""
+    if isinstance(parsed, dict):
+        code = parsed.get("code") or ""
+
+    expected_code_hash = _get_activation_code_hash()
+    provided_code_hash = _sha256_hex(code or "")
+
+    # Debug payload + parsing result
+    debug_payload = {
+        "content-type": request.headers.get("content-type"),
+        "raw_body": raw_text,
+        "parsed_json": parsed,
+        "code_received": code,
+        "expected_code_hash": expected_code_hash,
+        "provided_code_hash": provided_code_hash,
+    }
+
+    if not hmac.compare_digest(provided_code_hash, expected_code_hash):
+        return JSONResponse(
+            {"success": False, "error": "Invalid activation code", "debug": debug_payload},
+            status_code=200
+        )
+
+    expires_at = datetime.utcnow() + timedelta(days=30)
+    expires_at_iso = expires_at.replace(microsecond=0).isoformat() + "Z"
+    token = _make_activation_token(expires_at_iso)
+
+    return JSONResponse(
+        {
+            "success": True,
+            "expiresAt": expires_at_iso,
+            "token": token,
+            "codeHash": expected_code_hash,
+            "debug": debug_payload,
+        },
+        status_code=200
+    )
+
+
+def _require_activation_token(request: Request):
+    # Allow free trial
+    if request.headers.get("X-Free-Trial") == "true":
+        return
+
+    token = request.headers.get("X-Activation-Token") or ""
+    ok, _ = _verify_activation_token(token)
+    if not ok:
+        raise HTTPException(401, "License required")
+
+    # Check if license is still active in DB
+    try:
+        conn = get_admin_db()
+        c = conn.cursor()
+        c.execute("SELECT is_active FROM licenses WHERE token = ?", (token,))
+        row = c.fetchone()
+        conn.close()
+        if not row or row["is_active"] != 1:
+            raise HTTPException(401, "License deactivated")
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # If DB check fails, allow (graceful degradation)
+
+# ==========================================
 # API Endpoints
 # ==========================================
+
+
+# ==========================================
+# User-Facing: Request Activation
+# ==========================================
+@app.post("/api/request-activation")
+async def request_activation(request: Request):
+    try:
+        raw = await request.body()
+        data = json.loads(raw.decode("utf-8"))
+    except:
+        return JSONResponse({"success": False, "error": "Invalid JSON"}, status_code=400)
+
+    full_name = (data.get("full_name") or "").strip()
+    email = (data.get("email") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    company = (data.get("company") or "").strip()
+    notes = (data.get("notes") or "").strip()
+
+    if not full_name or not email:
+        return JSONResponse({"success": False, "error": "Name and email are required"})
+
+    conn = get_admin_db()
+    c = conn.cursor()
+
+    # Check if email already has an active license
+    c.execute("SELECT id, is_active FROM licenses WHERE email = ?", (email,))
+    existing = c.fetchone()
+    if existing and existing["is_active"]:
+        conn.close()
+        return JSONResponse({"success": False, "error": "This email already has an active license"})
+
+    # Upsert: if request exists for this email, reset to pending
+    c.execute("SELECT id FROM activation_requests WHERE email = ?", (email,))
+    existing_req = c.fetchone()
+    if existing_req:
+        c.execute("""
+            UPDATE activation_requests SET full_name=?, phone=?, company=?, notes=?, status='pending', reviewed_at=NULL, admin_note=NULL, created_at=datetime('now','localtime')
+            WHERE id = ?
+        """, (full_name, phone, company, notes, existing_req["id"]))
+    else:
+        c.execute("""
+            INSERT INTO activation_requests (full_name, email, phone, company, notes) VALUES (?, ?, ?, ?, ?)
+        """, (full_name, email, phone, company, notes))
+
+    conn.commit()
+    conn.close()
+    log_activity("request_created", email, f"Name: {full_name}, Company: {company}")
+
+    return JSONResponse({"success": True, "message": "Request submitted"})
+
+
+@app.post("/api/check-request-status")
+async def check_request_status(request: Request):
+    try:
+        raw = await request.body()
+        data = json.loads(raw.decode("utf-8"))
+    except:
+        return JSONResponse({"success": False, "error": "Invalid JSON"}, status_code=400)
+
+    email = (data.get("email") or "").strip()
+    if not email:
+        return JSONResponse({"success": False, "error": "Email is required"})
+
+    conn = get_admin_db()
+    c = conn.cursor()
+
+    c.execute("SELECT status, admin_note FROM activation_requests WHERE email = ? ORDER BY id DESC LIMIT 1", (email,))
+    req = c.fetchone()
+
+    if not req:
+        conn.close()
+        return JSONResponse({"success": True, "status": "not_found"})
+
+    status = req["status"]
+
+    if status == "pending":
+        conn.close()
+        return JSONResponse({"success": True, "status": "pending"})
+
+    if status == "rejected":
+        conn.close()
+        return JSONResponse({"success": True, "status": "rejected", "reason": req["admin_note"] or ""})
+
+    if status == "approved":
+        c.execute("SELECT token, expires_at FROM licenses WHERE email = ? AND is_active = 1", (email,))
+        lic = c.fetchone()
+        conn.close()
+        if lic:
+            return JSONResponse({"success": True, "status": "approved", "token": lic["token"], "expiresAt": lic["expires_at"]})
+        return JSONResponse({"success": True, "status": "pending"})
+
+    conn.close()
+    return JSONResponse({"success": True, "status": "not_found"})
+
+
 @app.post("/analyze")
-async def analyze_file(file: UploadFile = File(...)):
+async def analyze_file(file: UploadFile = File(...), request: Request = None):
+    # Require a valid activation token for every analysis request
+    _require_activation_token(request)
+
     if not file.filename.endswith(('.xlsx', '.xlsm', '.xls')):
         raise HTTPException(400, "Only Excel files allowed")
 
@@ -2222,3 +2568,193 @@ def health():
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+# ==========================================
+# Admin Panel Routes
+# ==========================================
+def admin_auth(request: Request):
+    if request.session.get("admin_logged_in") != True:
+        return False
+    return True
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+    if not admin_auth(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) as cnt FROM activation_requests WHERE status='pending'"); pending = c.fetchone()["cnt"]
+    c.execute("SELECT COUNT(*) as cnt FROM activation_requests WHERE status='approved'"); approved = c.fetchone()["cnt"]
+    c.execute("SELECT COUNT(*) as cnt FROM licenses WHERE is_active=1"); active = c.fetchone()["cnt"]
+    c.execute("SELECT COUNT(*) as cnt FROM activation_requests WHERE status='rejected'"); rejected = c.fetchone()["cnt"]
+    c.execute("SELECT * FROM activation_requests ORDER BY id DESC LIMIT 10"); recent = c.fetchall()
+    conn.close()
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request, "active_page": "dashboard",
+        "pending_count": pending, "approved_count": approved,
+        "active_licenses": active, "rejected_count": rejected,
+        "recent_requests": recent
+    })
+
+@app.get("/admin/login", response_class=HTMLResponse)
+async def admin_login_page(request: Request):
+    if admin_auth(request):
+        return RedirectResponse("/admin", status_code=302)
+    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+
+@app.post("/admin/login")
+async def admin_login_submit(request: Request):
+    form = await request.form()
+    if form.get("password") == ADMIN_PASSWORD:
+        request.session["admin_logged_in"] = True
+        return RedirectResponse("/admin", status_code=302)
+    return templates.TemplateResponse("login.html", {"request": request, "error": "Wrong password"})
+
+@app.get("/admin/logout")
+async def admin_logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/admin/login", status_code=302)
+
+@app.get("/admin/requests", response_class=HTMLResponse)
+async def admin_requests(request: Request):
+    if not admin_auth(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM activation_requests ORDER BY id DESC")
+    reqs = c.fetchall()
+    conn.close()
+    return templates.TemplateResponse("requests.html", {"request": request, "active_page": "requests", "requests": reqs})
+
+@app.post("/admin/requests/{req_id}/approve")
+async def admin_approve(req_id: int, request: Request):
+    if not admin_auth(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM activation_requests WHERE id = ?", (req_id,))
+    req = c.fetchone()
+    if not req:
+        conn.close()
+        return RedirectResponse("/admin/requests", status_code=302)
+
+    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    expires_at = (datetime.utcnow() + timedelta(days=30)).replace(microsecond=0).isoformat() + "Z"
+    token = _make_activation_token(expires_at)
+
+    c.execute("UPDATE activation_requests SET status='approved', reviewed_at=datetime('now','localtime') WHERE id = ?", (req_id,))
+    # Upsert license
+    c.execute("SELECT id FROM licenses WHERE email = ?", (req["email"],))
+    existing = c.fetchone()
+    if existing:
+        c.execute("UPDATE licenses SET token=?, expires_at=?, is_active=1, full_name=?, company=?, deactivated_at=NULL, deactivate_reason=NULL WHERE id = ?",
+                  (token, expires_at, req["full_name"], req["company"], existing["id"]))
+    else:
+        c.execute("INSERT INTO licenses (request_id, email, full_name, company, token, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+                  (req_id, req["email"], req["full_name"], req["company"], token, expires_at))
+    conn.commit()
+    conn.close()
+    log_activity("approved", req["email"], f"Request #{req_id}, Expires: {expires_at}")
+    return RedirectResponse("/admin/requests", status_code=302)
+
+@app.post("/admin/requests/{req_id}/reject")
+async def admin_reject(req_id: int, request: Request, reason: str = FastAPIForm("")):
+    if not admin_auth(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.execute("SELECT email FROM activation_requests WHERE id = ?", (req_id,))
+    req = c.fetchone()
+    if req:
+        c.execute("UPDATE activation_requests SET status='rejected', reviewed_at=datetime('now','localtime'), admin_note=? WHERE id = ?", (reason, req_id))
+        conn.commit()
+        log_activity("rejected", req["email"], f"Request #{req_id}, Reason: {reason}")
+    conn.close()
+    return RedirectResponse("/admin/requests", status_code=302)
+
+@app.get("/admin/licenses", response_class=HTMLResponse)
+async def admin_licenses(request: Request):
+    if not admin_auth(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.execute("SELECT l.*, r.company as req_company FROM licenses l LEFT JOIN activation_requests r ON l.request_id = r.id ORDER BY l.id DESC")
+    licenses = []
+    for row in c.fetchall():
+        lic = dict(row)
+        try:
+            exp = datetime.fromisoformat(lic["expires_at"].replace("Z", "+00:00"))
+            from datetime import timezone
+            days = max(0, (exp - datetime.now(timezone.utc)).days)
+        except:
+            days = 0
+        lic["days_left"] = days
+        lic["company"] = lic.get("company") or lic.get("req_company") or ""
+        licenses.append(lic)
+    conn.close()
+    return templates.TemplateResponse("licenses.html", {"request": request, "active_page": "licenses", "licenses": licenses})
+
+@app.post("/admin/licenses/{lic_id}/deactivate")
+async def admin_deactivate(lic_id: int, request: Request, reason: str = FastAPIForm("")):
+    if not admin_auth(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.execute("SELECT email FROM licenses WHERE id = ?", (lic_id,))
+    lic = c.fetchone()
+    if lic:
+        c.execute("UPDATE licenses SET is_active=0, deactivated_at=datetime('now','localtime'), deactivate_reason=? WHERE id = ?", (reason, lic_id))
+        conn.commit()
+        log_activity("deactivated", lic["email"], f"License #{lic_id}, Reason: {reason}")
+    conn.close()
+    return RedirectResponse("/admin/licenses", status_code=302)
+
+@app.post("/admin/licenses/{lic_id}/reactivate")
+async def admin_reactivate(lic_id: int, request: Request):
+    if not admin_auth(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.execute("SELECT email, expires_at FROM licenses WHERE id = ?", (lic_id,))
+    lic = c.fetchone()
+    if lic:
+        # Extend expiry by 30 days from now
+        new_exp = (datetime.utcnow() + timedelta(days=30)).replace(microsecond=0).isoformat() + "Z"
+        new_token = _make_activation_token(new_exp)
+        c.execute("UPDATE licenses SET is_active=1, token=?, expires_at=?, deactivated_at=NULL, deactivate_reason=NULL WHERE id = ?", (new_token, new_exp, lic_id))
+        conn.commit()
+        log_activity("reactivated", lic["email"], f"License #{lic_id}, New expiry: {new_exp}")
+    conn.close()
+    return RedirectResponse("/admin/licenses", status_code=302)
+
+@app.get("/admin/add-license", response_class=HTMLResponse)
+async def admin_add_license_page(request: Request):
+    if not admin_auth(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    return templates.TemplateResponse("add_license.html", {"request": request, "active_page": "add"})
+
+@app.post("/admin/licenses/add")
+async def admin_add_license(request: Request, email: str = FastAPIForm(""), full_name: str = FastAPIForm(""), company: str = FastAPIForm(""), days: int = FastAPIForm(30)):
+    if not admin_auth(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    if not email or not full_name:
+        return RedirectResponse("/admin/add-license", status_code=302)
+
+    expires_at = (datetime.utcnow() + timedelta(days=days)).replace(microsecond=0).isoformat() + "Z"
+    token = _make_activation_token(expires_at)
+
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.execute("SELECT id FROM licenses WHERE email = ?", (email,))
+    existing = c.fetchone()
+    if existing:
+        c.execute("UPDATE licenses SET token=?, expires_at=?, is_active=1, full_name=?, company=?, deactivated_at=NULL, deactivate_reason=NULL WHERE id = ?",
+                  (token, expires_at, full_name, company, existing["id"]))
+    else:
+        c.execute("INSERT INTO licenses (email, full_name, company, token, expires_at) VALUES (?, ?, ?, ?, ?)",
+                  (email, full_name, company, token, expires_at))
+    conn.commit()
+    conn.close()
+    log_activity("manual_add", email, f"Days: {days}, Expires: {expires_at}")
+    return RedirectResponse("/admin/licenses", status_code=302)

@@ -5,8 +5,49 @@ import NeonButton from '../ui/NeonButton';
 import OverviewSidebar from '../sidebar/OverviewSidebar';
 
 export default function Hero() {
-  const { file, setFile, error, analysis, loading, t } = useAppContext();
-  const { handleAnalyze, handleArchitect } = useAnalysis();
+  const {
+    file,
+    setFile,
+    error,
+    setError,
+    analysis,
+    loading,
+    t,
+    freeUsed,
+    setFreeUsed,
+    openLicenseModal,
+  } = useAppContext();
+
+  const { handleAnalyze, handleArchitect, handleDownloadExcel } = useAnalysis();
+
+  const onAnalyzeClick = async () => {
+    setError('');
+    const res = await handleAnalyze();
+    if (res?.success) {
+      // نجاح التحليل — إذا كانت أول مرة، علّم التجربة المجانية كمستخدمة
+      if (!freeUsed) setFreeUsed(true);
+    } else if (res?.error === 'LICENSE_REQUIRED') {
+      // المرة الثانية بدون ترخيص → اعرض نافذة "البرنامج موقوف"
+      openLicenseModal();
+    }
+  };
+
+  const onArchitectClick = async () => {
+    setError('');
+    const res = await handleArchitect();
+    if (res?.error === 'LICENSE_REQUIRED') {
+      openLicenseModal();
+    }
+  };
+
+  const onDownloadClick = async () => {
+    setError('');
+    const res = await handleDownloadExcel();
+    if (res?.error === 'LICENSE_REQUIRED') {
+      openLicenseModal();
+    }
+  };
+
   const fileRef = useRef(null);
 
   return (
@@ -37,14 +78,14 @@ export default function Hero() {
             <NeonButton
               variant="blue"
               disabled={!file || loading.analyze}
-              onClick={handleAnalyze}
+              onClick={onAnalyzeClick}
             >
               {loading.analyze ? t('hero.analyzing') : t('hero.analyze')}
             </NeonButton>
             <NeonButton
               variant="green"
               disabled={!analysis || loading.architect}
-              onClick={handleArchitect}
+              onClick={onArchitectClick}
             >
               {loading.architect ? t('hero.building') : t('hero.architect')}
             </NeonButton>
