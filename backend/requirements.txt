@@ -1,10 +1,9 @@
 fastapi
 uvicorn
-python-multipart
-openpyxl
-requests
 pandas
-pydantic
+openpyxl
 sqlalchemy
-numpy
-python-dateutil
+sqlite3  # (مضمنة في بايثون لكن يفضل ترك الباقي كما هو)
+jinja2>=3.1.0
+python-multipart
+itsdangerous
