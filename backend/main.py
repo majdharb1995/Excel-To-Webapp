@@ -2582,18 +2582,37 @@ def admin_auth(request: Request):
 async def admin_dashboard(request: Request):
     if not admin_auth(request):
         return RedirectResponse("/admin/login", status_code=302)
+        
     conn = get_admin_db()
     c = conn.cursor()
-    c.execute("SELECT COUNT(*) as cnt FROM activation_requests WHERE status='pending'"); pending = c.fetchone()["cnt"]
-    c.execute("SELECT COUNT(*) as cnt FROM activation_requests WHERE status='approved'"); approved = c.fetchone()["cnt"]
-    c.execute("SELECT COUNT(*) as cnt FROM licenses WHERE is_active=1"); active = c.fetchone()["cnt"]
-    c.execute("SELECT COUNT(*) as cnt FROM activation_requests WHERE status='rejected'"); rejected = c.fetchone()["cnt"]
-    c.execute("SELECT * FROM activation_requests ORDER BY id DESC LIMIT 10"); recent = c.fetchall()
+    
+    # جلب الإحصائيات بأمان عبر التفكيك المباشر (Tuple Unpacking) لضمان عدم حدوث Key Error
+    c.execute("SELECT COUNT(*) FROM activation_requests WHERE status='pending'")
+    pending = c.fetchone()[0] or 0
+    
+    c.execute("SELECT COUNT(*) FROM activation_requests WHERE status='approved'")
+    approved = c.fetchone()[0] or 0
+    
+    c.execute("SELECT COUNT(*) FROM licenses WHERE is_active=1")
+    active = c.fetchone()[0] or 0
+    
+    c.execute("SELECT COUNT(*) FROM activation_requests WHERE status='rejected'")
+    rejected = c.fetchone()[0] or 0
+    
+    # جلب الطلبات الأخيرة (تعتمد على الـ row_factory كـ Dictionary أو Rows بنجاح)
+    c.execute("SELECT * FROM activation_requests ORDER BY id DESC LIMIT 10")
+    recent = c.fetchall()
+    
     conn.close()
+    
+    # رندرة القالب وإرسال المتغيرات المستقرة
     return templates.TemplateResponse("dashboard.html", {
-        "request": request, "active_page": "dashboard",
-        "pending_count": pending, "approved_count": approved,
-        "active_licenses": active, "rejected_count": rejected,
+        "request": request, 
+        "active_page": "dashboard",
+        "pending_count": pending, 
+        "approved_count": approved,
+        "active_licenses": active, 
+        "rejected_count": rejected,
         "recent_requests": recent
     })
 
