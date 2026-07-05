@@ -58,7 +58,13 @@ export function AppProvider({ children }) {
   const t = useCallback((key) => translate(key, lang), [lang]);
 
   /* ── API Base URL ── */
-  const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  /* ── API Base URL (Dynamic Environment Detection) ── */
+  const isLocalhost = typeof window !== "undefined" && 
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+  const API = isLocalhost 
+    ? 'http://localhost:8000' 
+    : 'https://excel-to-webapp.onrender.com';
 
   /* ── License Logic ── */
   const {
