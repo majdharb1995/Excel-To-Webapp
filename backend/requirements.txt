@@ -1,9 +1,12 @@
 fastapi
 uvicorn
-pandas
-openpyxl
-sqlalchemy
-sqlite3  # (مضمنة في بايثون لكن يفضل ترك الباقي كما هو)
-jinja2>=3.1.0
 python-multipart
+openpyxl
+requests
+pandas
+pydantic
+sqlalchemy
+numpy
+python-dateutil
+jinja2>=3.1.0
 itsdangerous
