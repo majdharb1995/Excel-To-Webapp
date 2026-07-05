@@ -2578,49 +2578,58 @@ def admin_auth(request: Request):
         return False
     return True
 
+
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard(request: Request):
     if not admin_auth(request):
         return RedirectResponse("/admin/login", status_code=302)
-        
     conn = get_admin_db()
     c = conn.cursor()
-    
-    # جلب الإحصائيات بأمان عبر التفكيك المباشر (Tuple Unpacking) لضمان عدم حدوث Key Error
     c.execute("SELECT COUNT(*) FROM activation_requests WHERE status='pending'")
     pending = c.fetchone()[0] or 0
-    
     c.execute("SELECT COUNT(*) FROM activation_requests WHERE status='approved'")
     approved = c.fetchone()[0] or 0
-    
     c.execute("SELECT COUNT(*) FROM licenses WHERE is_active=1")
     active = c.fetchone()[0] or 0
-    
     c.execute("SELECT COUNT(*) FROM activation_requests WHERE status='rejected'")
     rejected = c.fetchone()[0] or 0
-    
-    # جلب الطلبات الأخيرة (تعتمد على الـ row_factory كـ Dictionary أو Rows بنجاح)
     c.execute("SELECT * FROM activation_requests ORDER BY id DESC LIMIT 10")
     recent = c.fetchall()
-    
     conn.close()
-    
-    # رندرة القالب وإرسال المتغيرات المستقرة
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request, 
-        "active_page": "dashboard",
-        "pending_count": pending, 
-        "approved_count": approved,
-        "active_licenses": active, 
-        "rejected_count": rejected,
-        "recent_requests": recent
-    })
 
-@app.get("/admin/login", response_class=HTMLResponse)
+    # ✅ التعديل: إضافة اسم المعامل context= صراحةً هنا أيضاً
+    return templates.TemplateResponse(
+        name="dashboard.html", 
+        context={
+            "request": request, "active_page": "dashboard",
+            "pending_count": pending, "approved_count": approved,
+            "active_licenses": active, "rejected_count": rejected,
+            "recent_requests": recent
+        }
+    )
+
+
+@app.get("/admin/login")
 async def admin_login_page(request: Request):
-    if admin_auth(request):
+    conn = get_admin_db()
+    c = conn.cursor()
+    c.execute("SELECT name, value FROM admin_settings WHERE name='branding_title'")
+    row = c.fetchone()
+    title = row["value"] if row else "Synapto AI"
+
+    c.execute("SELECT name, value FROM admin_settings WHERE name='branding_logo'")
+    row_logo = c.fetchone()
+    logo = row_logo["value"] if row_logo else ""
+    conn.close()
+
+    if request.session.get("admin_logged_in"):
         return RedirectResponse("/admin", status_code=302)
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+
+    # ✅ التعديل: إضافة اسم المعامل context= صراحةً لحماية البيئة السحابية
+    return templates.TemplateResponse(
+        name="login.html", 
+        context={"request": request, "branding_title": title, "branding_logo": logo, "error": ""}
+    )
 
 @app.post("/admin/login")
 async def admin_login_submit(request: Request):
@@ -2747,11 +2756,18 @@ async def admin_reactivate(lic_id: int, request: Request):
     conn.close()
     return RedirectResponse("/admin/licenses", status_code=302)
 
+
 @app.get("/admin/add-license", response_class=HTMLResponse)
 async def admin_add_license_page(request: Request):
     if not admin_auth(request):
         return RedirectResponse("/admin/login", status_code=302)
-    return templates.TemplateResponse("add_license.html", {"request": request, "active_page": "add"})
+        
+    # ✅ التعديل: إضافة اسم المعامل context= صراحةً
+    return templates.TemplateResponse(
+        name="add_license.html", 
+        context={"request": request, "active_page": "add"}
+    )
+
 
 @app.post("/admin/licenses/add")
 async def admin_add_license(request: Request, email: str = FastAPIForm(""), full_name: str = FastAPIForm(""), company: str = FastAPIForm(""), days: int = FastAPIForm(30)):
